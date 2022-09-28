@@ -1,0 +1,90 @@
+# reading image in tensorflow and showing
+
+image = tf.io.decode_image(tf.io.read_file(@dir), channels=1)
+plt.imshow(image)
+
+-----------------------------------------------------------------
+
+#using generator to create batch
+
+def data_gen(data,base,batch_size=32):
+    while(True):
+        img=[None]*batch_size  # placeholder for img array.
+        label=[None]*batch_size # placeholder for img label.
+        smpl=data.sample(batch_size) # drawing random batch from dataset of size batch_size. Like SGD.
+        for i in range(batch_size):
+	    #@custom
+            tmp=smpl.iloc[i][1].split('/')
+            tmp[0]=base
+            tmp='/'.join(tmp) # tmp has the img file location
+            #--------------
+            img[i]=tf.io.decode_image(tf.io.read_file(tmp), channels=1) # tmp=@dir/xyz.png;
+            label[i]=smpl.iloc[i][2]
+        img=tf.convert_to_tensor(img)
+        label=tf.convert_to_tensor(label)
+        yield (img,label)
+
+ds = tf.data.Dataset.from_generator(lambda: data_gen(data,base,batch_size=5),(tf.uint8, tf.int32))
+
+for i in ds.take(3):
+    print(i[1])
+---------------------------------------------------------------------------------------------------
+#one hot vector in tf of size n
+tf.one_hot(location,n)
+----------------------------------
+
+# @updated gen
+
+def data_gen(data,base,batch_size=32):
+    while(True):
+        img=[None]*batch_size
+        label=[None]*batch_size
+        smpl=data.sample(batch_size)
+        for i in range(batch_size):
+            tmp=smpl.iloc[i][1].split('/')
+            tmp[0]=base
+            tmp='/'.join(tmp)
+            img[i]=(tf.io.decode_image(tf.io.read_file(tmp), channels=1))/255 # normalised
+            label[i]=tf.one_hot(smpl.iloc[i][2],4,dtype=tf.float32)           # labels in one-hot vector format
+        img=tf.convert_to_tensor(img)
+        label=tf.convert_to_tensor(label)
+        yield (img,label)
+
+
+ds = tf.data.Dataset.from_generator(lambda: data_gen(data,base,batch_size=5),(tf.float32, tf.float32))
+
+
+
+----------------------------------------------------------------------------
+/* plotting weigths of convolution layers.
+
+w=model.get_weigths() # accessing all the weigths from the model.
+
+np.save('conv1_weights',w[4])
+np.save('conv2_weights',w[6]) # saving the weigths for later analysis.
+
+conv1=np.load('conv1_weights') # loading the weigths for analysis
+
+
+
+In [9]: conv1[:,:,:,1].shape
+Out[9]: (9, 9, 3)
+
+In [10]: conv1[:,:,:,0].shape
+Out[10]: (9, 9, 3)
+
+In [11]: conv1.shape
+Out[11]: (9, 9, 3, 64)
+
+// code snippet for plotting all the 64 kernels of size 9x9x3.
+In [14]: fig1=plt.figure(figsize=(8,12))
+    ...: 
+    ...: for i in range(1,65):
+    ...:     f=conv1[:,:,:,i-1]
+    ...:     fig1=plt.subplot(8,8,i)
+    ...:     fig1.set_xticks([])
+    ...:     fig1.set_yticks([])
+    ...:     plt.imshow(f[:,:,0],cmap='gray')
+    ...: plt.show()
+        
+

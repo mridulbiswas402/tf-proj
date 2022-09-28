@@ -1,0 +1,107 @@
+1{
+    paper=https://ieeexplore.ieee.org/document/9825036
+    dataset=https://www.heywhale.com/mw/dataset/61d3e5682d30dc001701f728/content.
+    accuracy= 96%
+    class= [tumor,nontumor]
+    train:test:val=7:2:1
+}
+2{
+    dataset=https://www.kaggle.com/sartajbhuvaji/brain-tumor-classification-mri
+    paper=https://www.sciencedirect.com/science/article/pii/S2665917422000460
+    accuracy= 95%
+    sensitivity=98.42%
+    specificity=89%
+    class=[meningioma,glioma,pituitary,no-tumor]
+    model=RCNN
+    train:test=
+}
+3{
+    dataset=hardvard medical school website.
+    paper=https://ieeexplore.ieee.org/document/9032811
+    accuracy=97%
+    class=2
+    train:test=220:84
+}
+4{
+    dataset="The Multimodal Brain Tumor Image Segmentation Benchmark (BRATS)"
+    paper=https://ieeexplore.ieee.org/document/9702609
+    accuracy=90%
+    class=2
+    train:test=80:20
+}
+5{
+    dataset=BRATS 2018 dataset
+    paper=https://ieeexplore.ieee.org/document/9498384
+    accuracy= 85.95%(YOLOv5) ,95.78%(Fast Ai)
+    precision= 96.7
+    recall= 95.7
+    class=2
+    train:test=
+}
+6{
+    dataset=2020-BRATS,Kaggle dataset.
+    paper=https://www.hindawi.com/journals/cin/2022/3236305/
+    accuracy= 98
+    precision= 98
+    recall= 92
+    class=4
+    train:test=
+}
+7{
+    dataset=https://www.kaggle.com/drsaeedmohsen/braintumordatasets
+    paper=https://www.sciencedirect.com/science/article/pii/S0925231222008384?via%3Dihub#b0200
+    accuracy= 87
+    precision= 87
+    recall= 87
+    class=2
+    train:test=80:20
+}
+8{
+    dataset=https://www.kaggle.com/datasets/abhranta/brain-tumor-detection-mri (accessed Jul. 01, 2022).
+    paper=https://www.proquest.com/docview/2707472832?pq-origsite=gscholar&fromopenview=true
+    accuracy= 96%
+    precision= 97
+    class=2
+    train:test:val=80:10:10
+}
+9{
+    dataset=https://www.kaggle.com/datasets/sartajbhuvaji/brain-tumor-classification-mri
+    paper=https://www.mdpi.com/2076-3417/12/11/5645/htm
+    accuracy= 98.9%
+    precision= 98.2%
+    recall= 99.7%
+    class=[Meningioma,Pituitary,Glioma]
+    train:test=80:20
+}
+10{
+    dataset=The Kaggle Brain Tumor Detection 2020 dataset
+    paper=https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8931531/
+    accuracy= 98.9%
+    sensitivity= 98.8%
+    specificity= 97.1%
+    class=[benign,malignant]
+    train:test=70:30
+}
+11{
+    dataset=https://www.kaggle.com/datasets/sartajbhuvaji/brain-tumor-classification-mri?select=Training
+    paper=https://www.mdpi.com/2075-4418/12/8/1793/htm
+    accuracy= 97.2%
+    class=4
+    train:test=
+}
+12{
+    dataset=Kaggle brain MRI image dataset
+    paper=https://link.springer.com/article/10.1007/s12553-022-00699-y
+    accuracy= 98.8%
+    sensitivity= 0.9677
+    specificity= 1.0000 
+    class=[tumor,healthy]
+    train:test=80:20
+}
+13{
+    dataset=private dataset
+    paper=https://www.mdpi.com/1424-8220/22/1/372/htm
+    accuracy= 95.75% 
+    class=[Meningioma,Pituitary,Glioma]
+    train:test=80:20
+}
