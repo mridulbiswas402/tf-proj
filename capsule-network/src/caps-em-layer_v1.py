@@ -140,10 +140,18 @@ class Capsule(keras.layers.Layer):
           r=r-1
           # E-step.
           for i in range(k):
-              for b in range(batch_size):
-                  tmp = tfp.distributions.MultivariateNormalFullCovariance(loc=mu[b][i],
-                                                                        covariance_matrix=sigma[b][i]).prob(input_tensor[b])
-                  N[b].assign(tmp)
+              #tileing mu & sigma for 1 pass computation
+              """ for processing the whole batch at once."""
+              mu_tmp=tf.expand_dims(mu[:,i,:,],axis=1)
+              mu_tmp=tf.tile(mu_tmp,[1,n,1])
+
+              sig_tmp=tf.expand_dims(sigma[:,i,:,:,],axis=1)
+              sig_tmp=tf.tile(sig_tmp,[1,n,1,1])
+
+              
+              N = tfp.distributions.MultivariateNormalFullCovariance(loc=mu_tmp,
+                                                              covariance_matrix=sig_tmp).prob(input_tensor)
+
               R[:,:,i].assign(tf.expand_dims(pi[:,i],axis=1)*N)
           R.assign(R/tf.reduce_sum(R,axis=2, keepdims=True))
 
