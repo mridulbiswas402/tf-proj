@@ -1,5 +1,6 @@
-""" This is tensorflow implementation of EM algorithm
-this version supports parallel batch processing """
+"""
+This is Tensorflow implementation of EM algorithm
+"""
 
 import numpy as np
 import tensorflow as tf
@@ -8,6 +9,8 @@ import tensorflow_probability as tfp
 import matplotlib.pyplot as plt
 from scipy import random
 from scipy.stats import multivariate_normal
+
+from tensorflow_probability import distributions as tfd
 
 def gen_data(k=3, dim=2, points_per_cluster=200, lim=[-10, 10]):
     '''
@@ -36,54 +39,42 @@ def gen_data(k=3, dim=2, points_per_cluster=200, lim=[-10, 10]):
         ax.autoscale(enable=True) 
     return x
 
+# artificial data generation.
+""" 
+4 batch of data each batch has 300 data points each of 2 dimentation.
+x.shape=[4,300,2] => [batch_size,n,dim]
+
+"""
+
 x1 = gen_data(k=3, dim=2, points_per_cluster=100)
 x2 = gen_data(k=3, dim=2, points_per_cluster=100)
 x3 = gen_data(k=3, dim=2, points_per_cluster=100)
 x4 = gen_data(k=3, dim=2, points_per_cluster=100)
 
 X=np.array([x1,x2,x3,x4])
+x=tf.convert_to_tensor(X,dtype=tf.float64) 
 
-x=tf.convert_to_tensor(X,dtype=tf.float64)
 
-x.shape
-
-k=3 # on of clusters.
-d=x.shape[-1] # dim of each data point
-n=x.shape[1] # cardinality of data points.
+k=3 # no of clusters.
+d=x.shape[-1] # dim of each data points.
+n=x.shape[1] # no of data points
 b=x.shape[0] # batch_size
 
-print(k,d,n,b)
+""" Parameter initialization """
 
-x.shape # [b,n,d]
-
-# parameter initialization for batch of data.
-
-pi=np.array([[0.3333,0.3333,0.3333],
-             [0.3333,0.3333,0.3333],
-             [0.3333,0.3333,0.3333],
-             [0.3333,0.3333,0.3333]])
-
-mu=np.array([[x[0][6],x[0][100],x[0][46]],
-             [x[1][6],x[1][100],x[1][46]],
-             [x[2][6],x[2][100],x[2][46]],
-             [x[3][6],x[3][100],x[3][46]]])
-
-sigma=np.array([[[[1.0,0],[0,1]],[[1,0],[0,1]],[[1,0],[0,1]]],
-                [[[1.0,0],[0,1]],[[1,0],[0,1]],[[1,0],[0,1]]],
-                [[[1.0,0],[0,1]],[[1,0],[0,1]],[[1,0],[0,1]]],
-                [[[1.0,0],[0,1]],[[1,0],[0,1]],[[1,0],[0,1]]]])
-
-R=np.zeros(shape=(b,n,k))
+pi=np.ones([b,k])/k  # prior probability
+mu=np.random.rand(b,k,d) # mean
+sigma=np.ones([b,k,d])   # std_dev
+R=np.zeros(shape=(b,n,k)) # posterior probabilities.
 
 
-pi=tf.Variable(pi,dtype=tf.float64)
-mu=tf.Variable(mu,dtype=tf.float64)
-sigma=tf.Variable(sigma,dtype=tf.float64)
-R=tf.Variable(R,dtype=tf.float64)
+pi=tf.convert_to_tensor(pi,dtype=tf.float64)
+mu=tf.convert_to_tensor(mu,dtype=tf.float64)
+sigma=tf.convert_to_tensor(sigma,dtype=tf.float64)
+R=tf.convert_to_tensor(R,dtype=tf.float64)
 
-print(pi.shape,mu.shape,sigma.shape,R.shape)
 
-"""-- E-step. --"""
+""" E-step """
 
 x_tmp=tf.expand_dims(x,axis=1) # x.shape==[b,n,d]
 x_tmp=tf.tile(x_tmp,[1,k,1,1]) # x_tmp.shape==[b,k,n,d]
@@ -91,18 +82,17 @@ x_tmp=tf.tile(x_tmp,[1,k,1,1]) # x_tmp.shape==[b,k,n,d]
 mu_tmp=tf.expand_dims(mu,axis=2) # mu.shape==[b,k,d]
 mu_tmp=tf.tile(mu_tmp,[1,1,n,1])   # mu_tmp.shape==[b,k,n,d]
 
-sig_tmp=tf.expand_dims(sigma,axis=2) # sigma.shape==[b,k,d,d]
-sig_tmp=tf.tile(sig_tmp,[1,1,n,1,1])   # sig_tmp.shape == [b,k,n,d,d]
+sig_tmp=tf.expand_dims(sigma,axis=2) # sigma.shape==[b,k,d]
+sig_tmp=tf.tile(sig_tmp,[1,1,n,1])   # sig_tmp.shape == [b,k,n,d]
 
-#print(x_tmp.shape,mu_tmp.shape,sig_tmp.shape)
 
-N = tfp.distributions.MultivariateNormalFullCovariance(loc=mu_tmp,covariance_matrix=sig_tmp).prob(x_tmp)
-#print(N.shape)
+
+N = tfd.MultivariateNormalDiag(loc=mu_tmp,scale_diag=sig_tmp).prob(x_tmp)
 N = pi[:,:,None]*N
 N = N/tf.expand_dims(tf.reduce_sum(N,axis=1),axis=1)
 R = tf.transpose(N,perm=[0,2,1])
 
-"""-- M-step. --"""
+""" M-step """
 
 # updating pi.
 N_k = tf.reduce_sum(R,axis=1)
@@ -118,12 +108,15 @@ mu_tmp=tf.expand_dims(mu,axis=2)
 mu_tmp=tf.tile(mu_tmp,[1,1,n,1])
 
 x_tmp=x_tmp-mu_tmp
-x_tmp=tf.reshape(x_tmp,[b,k,n,d,1])
-x_tmp_T=tf.transpose(x_tmp,perm=[0,1,2,4,3])
-res = tf.matmul(x_tmp,x_tmp_T)
+x_tmp=tf.square(x_tmp)
 
 R_T=tf.transpose(R,perm=[0,2,1])
 
-res = tf.multiply(tf.reshape(R_T,[b,k,n,1,1]),res)
-sigma = tf.reduce_sum(res,axis=2)/tf.reshape(N_k,[b,k,1,1])
+x_tmp = tf.multiply(tf.reshape(R_T,[b,k,n,1]),x_tmp)
+sigma = tf.reduce_sum(x_tmp,axis=2)/tf.reshape(N_k,[b,k,1])
+sigma=tf.sqrt(sigma)
+
+sigma.shape
+
+tf.reduce_sum(R,axis=2)
 
