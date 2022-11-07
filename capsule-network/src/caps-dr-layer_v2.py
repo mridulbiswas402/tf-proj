@@ -109,3 +109,6 @@ class Capsule(keras.layers.Layer):
           else:
               v = tf.squeeze(v, axis=[1,4])
               return v
+    
+    def compute_output_signature(self,input_shape):
+        return tf.TensorSpec(shape=[input_shape[0],self.caps_n,self.caps_dim],dtype=tf.float32)
