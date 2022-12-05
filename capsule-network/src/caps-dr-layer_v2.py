@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import os
 import time
 
-@tf.function
+#@tf.function
 def squash(x, axis=-1):
     s_squared_norm = tf.math.reduce_sum(tf.math.square(x), axis, keepdims=True) + keras.backend.epsilon()
     scale = tf.math.sqrt(s_squared_norm) / (1 + s_squared_norm)
