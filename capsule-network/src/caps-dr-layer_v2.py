@@ -27,10 +27,8 @@ def safe_norm(s, axis=-1, epsilon=1e-7, keep_dims=False):
         return tf.sqrt(squared_norm + epsilon)
     
 
-
 class Capsule(keras.layers.Layer):
    
-
     def __init__(self,
                  num_capsule,
                  dim_capsule,
@@ -53,51 +51,48 @@ class Capsule(keras.layers.Layer):
     def build(self, input_shape):
         
         self.W = self.add_weight(name='W',
-                    shape=[1, input_shape[1], self.caps_n, self.caps_dim, input_shape[-1]],
+                    shape=[input_shape[1], self.caps_n, self.caps_dim, input_shape[-1]],
                     dtype=tf.float32,
                     initializer='glorot_uniform',
                     trainable=True)
 
     def call(self, input_tensor):
-        batch_size = input_tensor.shape[0]
+        """ input_tensor.shape = [batch_size,caps_n(i-1),caps_dim(i-1)]"""
         
-        W_tiled = tf.tile(self.W, [batch_size, 1, 1, 1, 1]) # replicating the weights for parallel processing of a batch.
-        """ W_tiled.shape=[batch_size,caps_n(i-1),caps_n(i),caps_dim(i),caps_dim(i-1)] """
-
-        caps_output_expanded = tf.expand_dims(input_tensor, -1) # converting last dim to a column vector.
+        x = tf.expand_dims(input_tensor, -1) # converting last dim to a column vector.
         """ the above step change the input shape from 
             [batch_size,caps_n(i-1),caps_dim(i-1)] --> [batch_size,caps_n(i-1),caps_dim(i-1),1]"""
 
-        caps_output_tile = tf.expand_dims(caps_output_expanded, 2)
+        x = tf.expand_dims(x, 2)
         """ the above step change the input shape from 
             [batch_size,caps_n(i-1),caps_dim(i-1),1] --> [batch_size,caps_n(i-1),1,caps_dim(i-1),1]"""
 
-        caps_output_tiled = tf.tile(caps_output_tile, [1, 1, self.caps_n, 1, 1]) # replicating the input capsule vector for every output capsule.
+        x = tf.tile(x, [1, 1, self.caps_n, 1, 1]) # replicating the input capsule vector for every output capsule.
         """ i.e [batch_size,caps_n(i-1),1,caps_dim(i-1),1] --> [batch_size,caps_n(i-1),caps_n(i),1,caps_dim(i-1),1]"""
 
-        caps_predicted = tf.matmul(W_tiled, caps_output_tiled) # this is performing element wise tf.matmul() operation.
-        """ caps_predicted.shape = [1,caps_n(i-1),caps_n(i),caps_dim(i),1]"""
+        caps_predicted = tf.matmul(self.W, x) # this is performing element wise tf.matmul() operation.
+        """ caps_predicted.shape = [batch_size,caps_n(i-1),caps_n(i),caps_dim(i),1]"""
 
         """ dynamic routing """
-        raw_weights = tf.zeros([batch_size,input_tensor.shape[1] , self.caps_n, 1, 1]) # non trainable weights.
-        """ raw_weights.shape=[batch_size,caps_n(i-1) ,caps_n(i), 1, 1]"""
+        routing_weights = tf.zeros([1,input_tensor.shape[1] , self.caps_n, 1, 1]) # non trainable weights.
+        """ routing_weights.shape=[1,caps_n(i-1) ,caps_n(i), 1, 1]"""
 
         r=self.r
         while(r):
           r-=1
-          routing_weights = tf.nn.softmax(raw_weights,axis=2)
-          """ [batch_size,caps_n(i-1) ,caps_n(i), 1, 1]  softmax applied along the pointed dim.
-                                           ^                                                   """
+          routing_weights = tf.nn.softmax(routing_weights,axis=2)
+          """ [1,caps_n(i-1) ,caps_n(i), 1, 1]  softmax applied along the pointed dim.
+                                  ^                                                   """
 
-          weighted_predictions = tf.multiply(routing_weights, caps_predicted)
+          x = tf.multiply(routing_weights, caps_predicted)
           """ weighted_predictions.shape = [batch_size, caps_n(i-1),caps_n(i),caps_dim(i), 1]"""
 
-          weighted_sum = tf.reduce_sum(weighted_predictions, axis=1, keepdims=True)
+          x = tf.reduce_sum(x, axis=1, keepdims=True)
           """ [batch_size,caps_n(i-1) ,caps_n(i),caps_dim(i), 1]  sum applied along the pointed dim.
                                ^                                                               
-          therefore weighted_sum.shape=[batch_size,1 ,caps_n(i),caps_dim(i), 1]"""
+          therefore x.shape=[batch_size,1 ,caps_n(i),caps_dim(i), 1]"""
 
-          v = squash(weighted_sum, axis=-2) #normalize to unit length vector.
+          v = squash(x, axis=-2) #normalize to unit length vector.
           v_tiled = tf.tile(v, [1, input_tensor.shape[1], 1, 1, 1])
           """ v_tiled.shape=[batch_size,caps_n(i-1),caps_n(i),caps_dim(i), 1]"""
 
@@ -109,6 +104,6 @@ class Capsule(keras.layers.Layer):
           else:
               v = tf.squeeze(v, axis=[1,4])
               return v
-    
+
     def compute_output_signature(self,input_shape):
-        return tf.TensorSpec(shape=[input_shape[0],self.caps_n,self.caps_dim],dtype=tf.float32)
+      return tf.TensorSpec(shape=[None,self.caps_n,self.caps_dim],dtype=tf.float32) 
