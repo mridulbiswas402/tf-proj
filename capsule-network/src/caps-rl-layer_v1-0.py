@@ -29,7 +29,6 @@ routing-less-capsule-network with fully connected pose weigths + routing weights
 
 class Capsule(keras.layers.Layer):
    
-
     def __init__(self,
                  num_capsule,
                  dim_capsule,
@@ -59,27 +58,16 @@ class Capsule(keras.layers.Layer):
                     dtype=tf.float32,
                     initializer='glorot_uniform',
                     trainable=True)
-        
-        
+           
     def call(self, input_tensor):
-        batch_size = input_tensor.shape[0]
-        n=input_tensor.shape[1]
-        k=self.caps_n
-        
-        W_tiled = tf.tile(self.W, [batch_size, 1, 1, 1, 1])
-        
-        R_tiled = tf.tile(self.R,[batch_size,1,1])
-        R_tiled = tf.nn.softmax(R_tiled,axis=1)
+        R_nor = tf.nn.softmax(self.R,axis=1)
 
-        caps_output_expanded = tf.expand_dims(input_tensor, -1) # converting last dim to a column vector.
-        caps_output_tile = tf.expand_dims(caps_output_expanded, 2)
-        caps_output_tiled = tf.tile(caps_output_tile, [1, 1, self.caps_n, 1, 1]) # replicating the input capsule vector for every output capsule.
-        caps_predicted = tf.matmul(W_tiled, caps_output_tiled) # this is performing element wise tf.matmul() operation.       
-        weighted_prediction=tf.multiply(caps_predicted,tf.reshape(R_tiled,[batch_size,n,k,1,1]))
-        weighted_sum = tf.reduce_sum(weighted_prediction, axis=1, keepdims=True)
-        v=squash(weighted_sum, axis=-2)
-        v = tf.squeeze(v, axis=[1,4])
-        return v
-
-    def compute_output_signature(self,input_shape):
-      return tf.TensorSpec(shape=[input_shape[0],self.caps_n,self.caps_dim],dtype=tf.float32)
+        x = tf.expand_dims(input_tensor, -1) 
+        x = tf.expand_dims(x, 2)
+        x = tf.tile(x, [1, 1, self.caps_n, 1, 1]) 
+        x = tf.matmul(self.W, x)       
+        x = tf.multiply(x,tf.reshape(R_nor,[1,input_tensor.shape[1],self.caps_n,1,1]))
+        x = tf.reduce_sum(x, axis=1, keepdims=True)
+        x = squash(x, axis=-2)
+        x = tf.squeeze(x, axis=[1,4])
+        return x
